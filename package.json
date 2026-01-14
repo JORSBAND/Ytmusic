@@ -1,0 +1,19 @@
+{
+  "name": "family-music-bot",
+  "version": "1.0.0",
+  "description": "Telegram Mini App for Family Music",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.64.0",
+    "firebase-admin": "^11.11.1",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
