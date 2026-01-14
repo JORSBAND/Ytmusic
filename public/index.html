@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Family Music OS</title>
+    
+    <!-- Telegram Web App Script -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"SF Pro Display"', '-apple-system', 'sans-serif'] },
+                    animation: {
+                        'fade-slide': 'fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+                        'pulse-slow': 'pulse 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeSlide: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { background-color: #000; color: white; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); }
+        .glass-dark { background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        const { useState, useEffect, useRef } = React;
+        
+        // --- FIREBASE IMPORTS ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, writeBatch, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0S8IQj2PcQgctvJVWpH6nynsnu5hcc6E",
+            authDomain: "ytmusic-93a94.firebaseapp.com",
+            projectId: "ytmusic-93a94",
+            storageBucket: "ytmusic-93a94.firebasestorage.app",
+            messagingSenderId: "144917623122",
+            appId: "1:144917623122:web:310505eebc24f49224ca8b",
+            measurementId: "G-QG9MDB8MQD"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+        const COLLECTION_NAME = 'family_members';
+        const MONO_JAR_LINK = "https://send.monobank.ua/jar/5kxFz7yYBp";
+        const MONTHLY_PRICE = 30;
+
+        // --- ICONS ---
+        const Icon = ({ path, className, size = 24 }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>);
+        const Icons = {
+            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
+            Music: (p) => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />,
+            Wallet: (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />,
+            Shield: (p) => <Icon {...p} path={<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></>} />,
+            LogOut: (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} />,
+            Activity: (p) => <Icon {...p} path={<><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>} />,
+            Check: (p) => <Icon {...p} path={<><polyline points="20 6 9 17 4 12"/></>} />,
+            Calendar: (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />,
+            Settings: (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
+            Edit: (p) => <Icon {...p} path={<><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></>} />
+        };
+
+        const SpatialCard = ({ children, className = "", onClick, delay = "0s" }) => (
+            <div onClick={onClick} style={{ animationDelay: delay }} className={`relative overflow-hidden glass rounded-[32px] p-6 transition-all duration-300 active:scale-[0.98] animate-fade-slide ${className}`}>{children}</div>
+        );
+
+        const TabBar = ({ activeTab, setActiveTab, isAdmin }) => {
+            const totalItems = isAdmin ? 3 : 2;
+            const itemWidthPercent = 100 / totalItems;
+            const getLeftPos = () => activeTab === 'home' ? '4px' : activeTab === 'wallet' ? `calc(${itemWidthPercent}% + 4px)` : `calc(${itemWidthPercent * 2}% + 4px)`;
+            const getBgColor = () => activeTab === 'home' ? 'bg-white' : activeTab === 'wallet' ? 'bg-[#007AFF]' : 'bg-[#FF2D55]';
+
+            return (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 glass-dark rounded-full p-1 h-[68px] w-[92%] max-w-[380px] flex items-center shadow-2xl z-50">
+                    <div className={`absolute top-1 bottom-1 rounded-full shadow-lg transition-all duration-500 cubic-bezier(0.23, 1, 0.32, 1) ${getBgColor()}`} style={{ left: getLeftPos(), width: `calc(${itemWidthPercent}% - 8px)` }} />
+                    <button onClick={() => setActiveTab('home')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Music size={22} className={activeTab === 'home' ? 'text-black' : 'text-white/40'} />{activeTab === 'home' && <span className="text-[10px] text-black font-bold leading-none animate-fade-slide">Головна</span>}</button>
+                    <button onClick={() => setActiveTab('wallet')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Wallet size={22} className={activeTab === 'wallet' ? 'text-white' : 'text-white/40'} />{activeTab === 'wallet' && <span className="text-[10px] text-white font-bold leading-none animate-fade-slide">Гаманець</span>}</button>
+                    {isAdmin && <button onClick={() => setActiveTab('admin')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Shield size={22} className={activeTab === 'admin' ? 'text-white' : 'text-white/40'} /></button>}
+                </div>
+            );
+        };
+
+        const calculateCoverage = (amount) => { const num = parseFloat(amount); if (!num || num <= 0) return null; return { months: Math.floor(num / MONTHLY_PRICE), remainder: num % MONTHLY_PRICE }; };
+        const getDaysUntilPayment = () => { const now = new Date(); let target = new Date(now.getFullYear(), now.getMonth(), 10); if (now.getDate() >= 10) target = new Date(now.getFullYear(), now.getMonth() + 1, 10); return Math.ceil((target - now) / (1000 * 60 * 60 * 24)); };
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [userData, setUserData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [activeTab, setActiveTab] = useState('home');
+            const [showAdminLogin, setShowAdminLogin] = useState(false);
+            const [adminCode, setAdminCode] = useState('');
+            const [allMembers, setAllMembers] = useState([]);
+            const [editingMember, setEditingMember] = useState(null);
+            const [manualBalance, setManualBalance] = useState('');
+            const [topUpAmount, setTopUpAmount] = useState('');
+            const coverage = calculateCoverage(topUpAmount);
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+
+            useEffect(() => {
+                // Initialize Telegram Mini App
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.ready();
+                    window.Telegram.WebApp.expand();
+                }
+
+                const unsubAuth = onAuthStateChanged(auth, async (u) => {
+                    setUser(u);
+                    if (u) {
+                        setLoading(true);
+                        const userRef = doc(db, COLLECTION_NAME, u.uid);
+                        const unsubSnap = onSnapshot(userRef, async (snap) => {
+                            if (snap.exists()) {
+                                const data = snap.data();
+                                setUserData(data);
+                                
+                                // --- LINK TELEGRAM ID LOGIC ---
+                                if (window.Telegram && window.Telegram.WebApp) {
+                                    const tgUser = window.Telegram.WebApp.initDataUnsafe?.user;
+                                    if (tgUser && data.telegramId !== tgUser.id) {
+                                        // Save Telegram ID to database so Bot can message this user
+                                        await updateDoc(userRef, { telegramId: tgUser.id });
+                                        console.log("Telegram ID linked:", tgUser.id);
+                                    }
+                                }
+                                setLoading(false);
+                            } else {
+                                try {
+                                    const newUserData = { uid: u.uid, name: u.displayName || 'Користувач', email: u.email, balance: 0, role: 'member' };
+                                    await setDoc(userRef, newUserData);
+                                    setUserData(newUserData);
+                                    setLoading(false);
+                                } catch (err) { console.error(err); setLoading(false); }
+                            }
+                        });
+                        return () => unsubSnap();
+                    } else { setUserData(null); setLoading(false); }
+                });
+                return () => unsubAuth();
+            }, []);
+
+            useEffect(() => {
+                if (userData?.role === 'admin') {
+                    const q = query(collection(db, COLLECTION_NAME));
+                    return onSnapshot(q, (snap) => setAllMembers(snap.docs.map(d => d.data()).sort((a,b) => a.balance - b.balance)));
+                }
+            }, [userData]);
+
+            const handleAuth = async (e) => { e.preventDefault(); try { if (isLogin) await signInWithEmailAndPassword(auth, email, password); else { const res = await createUserWithEmailAndPassword(auth, email, password); await updateProfile(res.user, { displayName: name }); } } catch (err) { alert(err.message); } };
+            const verifyAdmin = async () => { if (adminCode === 'disco2024') { await updateDoc(doc(db, COLLECTION_NAME, user.uid), { role: 'admin' }); setShowAdminLogin(false); alert('Вітаємо, Адмін!'); } else { alert('Невірний пароль'); } };
+            const deductAll = async () => { if(!confirm('Списати 30 грн з УСІХ?')) return; const batch = writeBatch(db); allMembers.forEach(m => batch.update(doc(db, COLLECTION_NAME, m.uid), { balance: Number(m.balance) - 30 })); await batch.commit(); };
+            const adminQuickAdd = async (uid, current, delta) => { await updateDoc(doc(db, COLLECTION_NAME, uid), { balance: Number(current) + Number(delta) }); };
+            const saveManualBalance = async () => { if (editingMember && manualBalance !== '') { await updateDoc(doc(db, COLLECTION_NAME, editingMember.uid), { balance: Number(manualBalance) }); setEditingMember(null); } };
+
+            if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-black"><div className="w-16 h-16 rounded-full border-4 border-t-[#007AFF] border-white/10 animate-spin mb-4"></div></div>;
+
+            if (!user) return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
+                     <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[120px] animate-pulse-slow"></div>
+                     <div className="absolute bottom-[-20%] right-[-20%] w-[500px] h-[500px] bg-purple-600/30 rounded-full blur-[120px] animate-pulse-slow delay-1000"></div>
+                    <div className="z-10 w-full max-w-sm glass p-8 rounded-[40px] animate-fade-slide">
+                        <div className="flex justify-center mb-6"><div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 rounded-[24px] flex items-center justify-center shadow-lg"><Icons.Sparkles className="text-white" size={40} /></div></div>
+                        <h1 className="text-3xl font-bold text-center mb-1 text-white">Family OS</h1>
+                        <p className="text-white/40 text-center mb-8 text-sm">Вхід у систему</p>
+                        <form onSubmit={handleAuth} className="space-y-3">
+                            {!isLogin && <input value={name} onChange={e=>setName(e.target.value)} placeholder="Ім'я" className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-blue-500" required />}
+                            <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-blue-500" required />
+                            <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Пароль" className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white outline-none focus:border-blue-500" required />
+                            <button className="w-full bg-white text-black font-bold py-4 rounded-2xl active:scale-[0.98] transition-transform">{isLogin ? 'Увійти' : 'Реєстрація'}</button>
+                        </form>
+                        <button onClick={() => signInWithPopup(auth, googleProvider)} className="w-full mt-3 py-4 rounded-2xl bg-[#1a1a1a] text-white font-medium border border-white/10 hover:bg-[#252525]">Google</button>
+                        <button onClick={() => setIsLogin(!isLogin)} className="w-full mt-6 text-sm text-white/50">{isLogin ? 'Немає акаунту? Реєстрація' : 'Вхід'}</button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-screen pb-32 font-sans relative">
+                    <div className="fixed inset-0 pointer-events-none z-0"><div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-[#0f172a] to-transparent opacity-60"></div><div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-900/20 rounded-full blur-[120px]"></div></div>
+                    <header className="relative z-20 px-6 pt-12 pb-4 flex justify-between items-center animate-fade-slide">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] p-[2px] shadow-lg shadow-blue-500/20"><div className="w-full h-full rounded-full bg-black flex items-center justify-center text-lg font-bold">{userData?.name ? userData.name.charAt(0) : 'U'}</div></div>
+                            <div className="flex flex-col justify-center"><h2 className="text-lg font-bold leading-none">{userData?.name || 'User'}</h2><span className="text-xs text-white/40 tracking-wider uppercase font-semibold mt-1">{userData?.role === 'admin' ? 'Administrator' : 'Family Member'}</span></div>
+                        </div>
+                        <div className="flex gap-2">
+                            {userData?.role !== 'admin' && <button onClick={() => setShowAdminLogin(true)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/40 hover:text-white"><Icons.Settings size={20} /></button>}
+                            <button onClick={() => signOut(auth)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-red-400 hover:bg-red-500/20"><Icons.LogOut size={20} /></button>
+                        </div>
+                    </header>
+
+                    <main className="relative z-10 px-4 min-h-[500px]">
+                        <div key={activeTab} className="animate-fade-slide">
+                            {activeTab === 'home' && (
+                                <div className="space-y-4">
+                                    <SpatialCard className="bg-gradient-to-br from-[#007AFF]/20 to-[#5856D6]/20 border-white/10">
+                                        <div className="flex justify-between items-start">
+                                            <div><span className="flex items-center gap-2 text-[#5AC8FA] text-xs font-bold uppercase tracking-widest mb-2"><Icons.Calendar size={14} /> Наступна оплата</span><h1 className="text-5xl font-bold tracking-tighter text-white drop-shadow-xl">{getDaysUntilPayment()} <span className="text-xl font-normal text-white/40">днів</span></h1></div>
+                                            <div className="text-right"><div className="text-2xl font-bold">{MONTHLY_PRICE}₴</div><div className="text-xs text-white/40 font-medium uppercase">щомісяця</div></div>
+                                        </div>
+                                        <div className="mt-6 w-full h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] shadow-[0_0_10px_rgba(0,122,255,0.5)]" style={{ width: `${(30 - getDaysUntilPayment()) / 30 * 100}%` }}></div></div>
+                                    </SpatialCard>
+                                    <SpatialCard delay="0.1s">
+                                        <div className="flex items-center gap-5">
+                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-xl ${userData.balance < 0 ? 'bg-red-500 text-white shadow-red-500/40' : 'bg-[#30D158] text-black shadow-green-500/40'}`}>{userData.balance < 0 ? '!' : <Icons.Check size={32} strokeWidth={3} />}</div>
+                                            <div className="flex-1"><h3 className="text-xl font-bold text-white">Ваш баланс</h3><p className="text-sm text-white/40">{userData.balance < 0 ? 'Будь ласка, поповніть' : 'Доступно на рахунку'}</p></div>
+                                            <div className={`text-3xl font-bold tracking-tight ${userData.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{userData.balance}₴</div>
+                                        </div>
+                                    </SpatialCard>
+                                    {userData.balance < 0 && <button onClick={() => setActiveTab('wallet')} className="w-full py-4 rounded-[28px] bg-white text-black font-bold shadow-lg active:scale-95 transition-transform animate-pulse-slow">Поповнити баланс</button>}
+                                </div>
+                            )}
+
+                            {activeTab === 'wallet' && (
+                                <div className="space-y-6">
+                                    <div className="text-center py-8 animate-fade-slide"><span className="text-white/40 text-xs font-bold uppercase tracking-[0.2em]">Ваш баланс</span><div className={`text-6xl md:text-8xl font-bold mt-2 tracking-tighter drop-shadow-2xl ${userData.balance < 0 ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50'}`}>{userData.balance}<span className="text-2xl align-top ml-2 opacity-30 font-light">₴</span></div></div>
+                                    <SpatialCard delay="0.1s" className="bg-[#1c1c1e]/60">
+                                        <label className="text-sm text-white/40 mb-3 block ml-1 font-medium">Скільки хочете скинути?</label>
+                                        <div className="flex items-center gap-3 mb-6"><input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="0" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-3xl font-bold outline-none focus:border-[#007AFF] transition-all placeholder:text-white/10" /><span className="text-xl font-bold text-white/30">UAH</span></div>
+                                        {coverage && (<div className="bg-[#007AFF]/10 border border-[#007AFF]/30 rounded-2xl p-4 mb-6 flex items-start gap-3"><Icons.Sparkles className="text-[#007AFF] shrink-0 mt-1" size={18} /><div><div className="font-bold text-[#5AC8FA]">Вистачить на {coverage.months} міс.</div>{coverage.remainder > 0 && <div className="text-xs text-white/60">та залишиться {coverage.remainder} грн</div>}</div></div>)}
+                                        <a href={MONO_JAR_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-[#ea5353] to-[#d63030] text-white font-bold text-center shadow-lg shadow-red-500/20 active:scale-[0.96] transition-all hover:brightness-110"><Icons.Wallet size={20}/> Відкрити Monobank</a>
+                                    </SpatialCard>
+                                </div>
+                            )}
+
+                            {activeTab === 'admin' && userData?.role === 'admin' && (
+                                <div className="space-y-4">
+                                    <SpatialCard className="bg-[#FF2D55]/10 border-[#FF2D55]/20"><button onClick={deductAll} className="w-full flex items-center justify-between group"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-full bg-[#FF2D55] flex items-center justify-center text-white shadow-lg shadow-red-500/30 group-active:scale-90 transition-transform"><Icons.Activity size={24} /></div><div className="text-left"><div className="font-bold text-white text-lg">Зняти плату</div><div className="text-xs text-white/50">-30 грн з усіх</div></div></div></button></SpatialCard>
+                                    <div className="pb-24 animate-fade-slide" style={{ animationDelay: '0.1s' }}>
+                                        <h3 className="text-white/30 text-xs font-bold uppercase tracking-widest mb-4 pl-2">Учасники ({allMembers.length})</h3>
+                                        <div className="grid gap-3">{allMembers.map(m => (<div key={m.uid} className="bg-white/5 border border-white/5 rounded-[24px] p-4 flex flex-col gap-3 backdrop-blur-md"><div className="flex justify-between items-center"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">{m.name ? m.name.charAt(0) : '?'}</div><div><div className="font-bold text-sm max-w-[120px] truncate">{m.name || 'No Name'}</div><div className="text-[10px] text-white/40">{m.email}</div></div></div><div className={`font-mono text-lg font-bold ${m.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{m.balance}</div></div><div className="flex gap-2"><button onClick={() => adminQuickAdd(m.uid, m.balance, 30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-[#30D158] hover:bg-[#30D158]/20 transition-colors">+30</button><button onClick={() => adminQuickAdd(m.uid, m.balance, -30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors">-30</button><button onClick={() => { setEditingMember(m); setManualBalance(m.balance); }} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center gap-1"><Icons.Edit size={14} /> Змінити</button></div></div>))}</div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </main>
+
+                    {userData && <TabBar activeTab={activeTab} setActiveTab={setActiveTab} isAdmin={userData.role === 'admin'} />}
+
+                    {showAdminLogin && (<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-xl p-6 animate-fade-slide"><div className="w-full max-w-xs glass p-6 rounded-[32px] text-center"><h3 className="text-lg font-bold mb-4">Вхід Модератора</h3><input type="password" value={adminCode} onChange={e => setAdminCode(e.target.value)} className="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-center tracking-[8px] text-xl mb-6 outline-none focus:border-[#007AFF]" placeholder="••••" autoFocus /><div className="flex gap-3"><button onClick={() => setShowAdminLogin(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/50 hover:text-white">Назад</button><button onClick={verifyAdmin} className="flex-1 py-3 rounded-xl bg-[#007AFF] font-bold shadow-lg shadow-blue-500/30">Увійти</button></div></div></div>)}
+                    {editingMember && (<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-xl p-6 animate-fade-slide"><div className="w-full max-w-xs glass p-6 rounded-[32px] text-center"><h3 className="text-lg font-bold mb-1">Зміна балансу</h3><p className="text-white/40 text-xs mb-6">{editingMember.name}</p><div className="flex items-center gap-2 justify-center mb-6"><input type="number" value={manualBalance} onChange={e => setManualBalance(e.target.value)} className="w-32 bg-transparent border-b-2 border-white/20 p-2 text-center text-4xl font-bold outline-none focus:border-[#007AFF]" autoFocus /><span className="text-xl font-bold text-white/30">₴</span></div><div className="flex gap-3"><button onClick={() => setEditingMember(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/50 hover:text-white">Скасувати</button><button onClick={saveManualBalance} className="flex-1 py-3 rounded-xl bg-[#30D158] text-black font-bold shadow-lg shadow-green-500/30">Зберегти</button></div></div></div>)}
+                </div>
+            );
+        }
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
+
