@@ -7,40 +7,60 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN; 
-
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
 
 const app = express();
+// Додаємо можливість читати JSON запити від сайту
+app.use(express.json());
+
 const bot = new TelegramBot(TOKEN, { polling: true });
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 }
-
 const db = admin.firestore();
 
-// Веб-сервер
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+
+// --- НОВЕ: API ДЛЯ РУЧНОГО НАГАДУВАННЯ ---
+app.post('/api/notify', async (req, res) => {
+    const { telegramId, name, balance } = req.body;
+
+    if (!telegramId) {
+        return res.status(400).json({ error: 'User has no Telegram ID' });
+    }
+
+    const message = `👋 <b>Привіт, ${name}!</b>\n\nАдміністратор нагадує про заборгованість.\nНа твоєму балансі: <b>${balance} грн</b>.\n\nБудь ласка, поповни рахунок через додаток! 👇`;
+
+    try {
+        await bot.sendMessage(telegramId, message, { 
+            parse_mode: 'HTML',
+            reply_markup: {
+                inline_keyboard: [[{ text: "💸 Поповнити", web_app: { url: process.env.APP_URL } }]]
+            }
+        });
+        res.json({ success: true });
+    } catch (error) {
+        console.error("Error sending message:", error.message);
+        res.status(500).json({ error: "Failed to send message" });
+    }
+});
 
 // Команда /start
 bot.on('message', (msg) => {
     if (msg.text === '/start') {
         bot.sendMessage(msg.chat.id, "Привіт! 👋\nЦе менеджер сімейної підписки YouTube.\n\nНатисни кнопку нижче, щоб відкрити додаток.", {
             reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🎵 Відкрити Family Music", web_app: { url: process.env.APP_URL } }]
-                ]
+                inline_keyboard: [[{ text: "🎵 Відкрити Family Music", web_app: { url: process.env.APP_URL } }]]
             }
         });
     }
 });
 
-// Нагадування (Оновлене під нову структуру)
+// Автоматичні нагадування (Cron)
 cron.schedule('0 10 * * *', async () => {
-    console.log('⏰ Перевірка нагадувань...');
+    console.log('⏰ Auto-reminder check...');
     const today = new Date();
     const day = today.getDate();
 
@@ -49,8 +69,7 @@ cron.schedule('0 10 * * *', async () => {
             const snapshot = await db.collection('family_members').get();
             snapshot.forEach(doc => {
                 const user = doc.data();
-                // Тепер user.uid або doc.id - це і є Telegram ID
-                const chatId = user.telegramId || doc.id; 
+                const chatId = user.telegramId; // Беремо ID, який зберіг Mini App
 
                 if (chatId && user.balance < 30) {
                     let message = "";
