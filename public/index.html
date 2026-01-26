@@ -4,42 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Music OS</title>
-    
-    <!-- Telegram Web App -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['"SF Pro Display"', '-apple-system', 'sans-serif'] },
-                    animation: {
-                        'fade-slide': 'fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
-                        'pulse-slow': 'pulse 3s ease-in-out infinite',
-                    },
-                    keyframes: {
-                        fadeSlide: {
-                            '0%': { opacity: '0', transform: 'translateY(8px)' },
-                            '100%': { opacity: '1', transform: 'translateY(0)' },
-                        }
-                    }
+                    animation: { 'fade-slide': 'fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' },
+                    keyframes: { fadeSlide: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
                 }
             }
         }
     </script>
-
     <style>
         body { background-color: #000; color: white; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); }
         .glass-dark { background: rgba(18, 18, 18, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.12); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
@@ -47,12 +33,9 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        const { useState, useEffect, useRef } = React;
-        
-        // --- FIREBASE IMPORTS ---
+        const { useState, useEffect } = React;
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        // Ми прибрали Auth, бо тепер Телеграм - це наш паспорт
-        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, writeBatch, query, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, writeBatch, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyB0S8IQj2PcQgctvJVWpH6nynsnu5hcc6E",
@@ -66,15 +49,14 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        
         const COLLECTION_NAME = 'family_members';
         const MONO_JAR_LINK = "https://send.monobank.ua/jar/5kxFz7yYBp";
         const MONTHLY_PRICE = 30;
 
-        // --- ICONS ---
+        // ICONS
         const Icon = ({ path, className, size = 24 }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>);
         const Icons = {
-            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
+            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
             Music: (p) => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />,
             Wallet: (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />,
             Shield: (p) => <Icon {...p} path={<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></>} />,
@@ -83,7 +65,8 @@
             Check: (p) => <Icon {...p} path={<><polyline points="20 6 9 17 4 12"/></>} />,
             Calendar: (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />,
             Settings: (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
-            Edit: (p) => <Icon {...p} path={<><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></>} />
+            Edit: (p) => <Icon {...p} path={<><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></>} />,
+            Bell: (p) => <Icon {...p} path={<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>} />
         };
 
         const SpatialCard = ({ children, className = "", onClick, delay = "0s" }) => (
@@ -112,7 +95,7 @@
         function App() {
             const [userData, setUserData] = useState(null);
             const [loading, setLoading] = useState(true);
-            const [tgUser, setTgUser] = useState(null); // Дані з телеграму
+            const [tgUser, setTgUser] = useState(null);
             const [activeTab, setActiveTab] = useState('home');
             const [showAdminLogin, setShowAdminLogin] = useState(false);
             const [adminCode, setAdminCode] = useState('');
@@ -122,50 +105,32 @@
             const [topUpAmount, setTopUpAmount] = useState('');
             const coverage = calculateCoverage(topUpAmount);
 
-            // --- ГОЛОВНА ЛОГІКА АВТОРИЗАЦІЇ ---
             useEffect(() => {
                 if (window.Telegram && window.Telegram.WebApp) {
                     const tg = window.Telegram.WebApp;
-                    tg.ready();
-                    tg.expand();
-
+                    tg.ready(); tg.expand();
                     const user = tg.initDataUnsafe?.user;
                     setTgUser(user);
 
                     if (user) {
-                        // Використовуємо Telegram ID як ID документа
                         const userId = user.id.toString();
                         const userRef = doc(db, COLLECTION_NAME, userId);
-
                         const unsub = onSnapshot(userRef, async (snap) => {
                             if (snap.exists()) {
-                                setUserData(snap.data());
+                                const data = snap.data();
+                                setUserData(data);
+                                if (!data.telegramId) await updateDoc(userRef, { telegramId: user.id });
                                 setLoading(false);
                             } else {
-                                // Якщо немає в базі - створюємо автоматично
                                 try {
-                                    const newUserData = { 
-                                        uid: userId, // Telegram ID
-                                        telegramId: user.id, // Дублюємо для бота
-                                        name: user.first_name + (user.last_name ? ' ' + user.last_name : ''), 
-                                        username: user.username || '',
-                                        balance: 0, 
-                                        role: 'member' 
-                                    };
-                                    await setDoc(userRef, newUserData);
-                                    setUserData(newUserData);
-                                    setLoading(false);
+                                    const newUserData = { uid: userId, telegramId: user.id, name: user.first_name + (user.last_name ? ' ' + user.last_name : ''), balance: 0, role: 'member' };
+                                    await setDoc(userRef, newUserData); setUserData(newUserData); setLoading(false);
                                 } catch (err) { console.error(err); setLoading(false); }
                             }
                         });
                         return () => unsub();
-                    } else {
-                        // Якщо відкрито не в Телеграмі
-                        setLoading(false);
-                    }
-                } else {
-                    setLoading(false);
-                }
+                    } else { setLoading(false); }
+                } else { setLoading(false); }
             }, []);
 
             useEffect(() => {
@@ -175,60 +140,41 @@
                 }
             }, [userData]);
 
-            const verifyAdmin = async () => { 
-                if (adminCode === 'disco2024') { 
-                    await updateDoc(doc(db, COLLECTION_NAME, userData.uid.toString()), { role: 'admin' }); 
-                    setShowAdminLogin(false); 
-                    alert('Вітаємо, Адмін!'); 
-                } else { alert('Невірний пароль'); } 
-            };
-            
-            const deductAll = async () => { 
-                if(!confirm('Списати 30 грн з УСІХ?')) return; 
-                const batch = writeBatch(db); 
-                allMembers.forEach(m => batch.update(doc(db, COLLECTION_NAME, m.uid.toString()), { balance: Number(m.balance) - 30 })); 
-                await batch.commit(); 
-            };
-            
+            const verifyAdmin = async () => { if (adminCode === 'disco2024') { await updateDoc(doc(db, COLLECTION_NAME, userData.uid.toString()), { role: 'admin' }); setShowAdminLogin(false); alert('Вітаємо, Адмін!'); } else { alert('Невірний пароль'); } };
+            const deductAll = async () => { if(!confirm('Списати 30 грн з УСІХ?')) return; const batch = writeBatch(db); allMembers.forEach(m => batch.update(doc(db, COLLECTION_NAME, m.uid.toString()), { balance: Number(m.balance) - 30 })); await batch.commit(); };
             const adminQuickAdd = async (uid, current, delta) => { await updateDoc(doc(db, COLLECTION_NAME, uid.toString()), { balance: Number(current) + Number(delta) }); };
-            
-            const saveManualBalance = async () => { 
-                if (editingMember && manualBalance !== '') { 
-                    await updateDoc(doc(db, COLLECTION_NAME, editingMember.uid.toString()), { balance: Number(manualBalance) }); 
-                    setEditingMember(null); 
-                } 
+            const saveManualBalance = async () => { if (editingMember && manualBalance !== '') { await updateDoc(doc(db, COLLECTION_NAME, editingMember.uid.toString()), { balance: Number(manualBalance) }); setEditingMember(null); } };
+
+            // --- MANUAL REMINDER FUNCTION ---
+            const sendManualReminder = async (member) => {
+                if(!member.telegramId) return alert('Користувач не прив\'язаний до Telegram!');
+                if(!confirm(`Надіслати нагадування для ${member.name}?`)) return;
+                
+                try {
+                    const response = await fetch('/api/notify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ telegramId: member.telegramId, name: member.name, balance: member.balance })
+                    });
+                    const res = await response.json();
+                    if(res.success) alert('Нагадування надіслано! 🔔');
+                    else alert('Помилка: ' + res.error);
+                } catch (e) { alert('Помилка мережі'); }
             };
 
-            // Loading Screen
             if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-black"><div className="w-16 h-16 rounded-full border-4 border-t-[#007AFF] border-white/10 animate-spin mb-4"></div><p className="text-white/30 text-xs animate-pulse">З'єднання з Telegram...</p></div>;
+            if (!tgUser) return <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-black"><div className="w-20 h-20 bg-[#007AFF]/20 rounded-full flex items-center justify-center mb-6 text-[#007AFF] animate-pulse"><Icons.Shield size={40} /></div><h1 className="text-2xl font-bold mb-2">Відкрийте в Telegram</h1><p className="text-white/50">Цей додаток працює тільки як частина Telegram-бота.</p></div>;
 
-            // Not In Telegram Error
-            if (!tgUser) return (
-                <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-black">
-                     <div className="w-20 h-20 bg-[#007AFF]/20 rounded-full flex items-center justify-center mb-6 text-[#007AFF] animate-pulse"><Icons.Shield size={40} /></div>
-                     <h1 className="text-2xl font-bold mb-2">Відкрийте в Telegram</h1>
-                     <p className="text-white/50">Цей додаток працює тільки як частина Telegram-бота.</p>
-                </div>
-            );
-
-            // Main App
             return (
                 <div className="min-h-screen pb-32 font-sans relative">
                     <div className="fixed inset-0 pointer-events-none z-0"><div className="absolute top-0 left-0 w-full h-[600px] bg-gradient-to-b from-[#0f172a] to-transparent opacity-60"></div><div className="absolute bottom-0 right-0 w-[400px] h-[400px] bg-blue-900/20 rounded-full blur-[120px]"></div></div>
 
                     <header className="relative z-20 px-6 pt-12 pb-4 flex justify-between items-center animate-fade-slide">
                         <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] p-[2px] shadow-lg shadow-blue-500/20">
-                                <div className="w-full h-full rounded-full bg-black flex items-center justify-center text-lg font-bold">{userData?.name ? userData.name.charAt(0) : 'U'}</div>
-                            </div>
-                            <div className="flex flex-col justify-center">
-                                <h2 className="text-lg font-bold leading-none">{userData?.name || 'User'}</h2>
-                                <span className="text-xs text-white/40 tracking-wider uppercase font-semibold mt-1">{userData?.role === 'admin' ? 'Administrator' : 'Family Member'}</span>
-                            </div>
+                            <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#007AFF] to-[#5AC8FA] p-[2px] shadow-lg shadow-blue-500/20"><div className="w-full h-full rounded-full bg-black flex items-center justify-center text-lg font-bold">{userData?.name ? userData.name.charAt(0) : 'U'}</div></div>
+                            <div className="flex flex-col justify-center"><h2 className="text-lg font-bold leading-none">{userData?.name || 'User'}</h2><span className="text-xs text-white/40 tracking-wider uppercase font-semibold mt-1">{userData?.role === 'admin' ? 'Administrator' : 'Family Member'}</span></div>
                         </div>
-                        <div className="flex gap-2">
-                            {userData?.role !== 'admin' && <button onClick={() => setShowAdminLogin(true)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/40 hover:text-white"><Icons.Settings size={20} /></button>}
-                        </div>
+                        <div className="flex gap-2">{userData?.role !== 'admin' && <button onClick={() => setShowAdminLogin(true)} className="w-10 h-10 rounded-full glass flex items-center justify-center text-white/40 hover:text-white"><Icons.Settings size={20} /></button>}</div>
                     </header>
 
                     <main className="relative z-10 px-4 min-h-[500px]">
@@ -252,6 +198,7 @@
                                     {userData.balance < 0 && <button onClick={() => setActiveTab('wallet')} className="w-full py-4 rounded-[28px] bg-white text-black font-bold shadow-lg active:scale-95 transition-transform animate-pulse-slow">Поповнити баланс</button>}
                                 </div>
                             )}
+
                             {activeTab === 'wallet' && (
                                 <div className="space-y-6">
                                     <div className="text-center py-8 animate-fade-slide"><span className="text-white/40 text-xs font-bold uppercase tracking-[0.2em]">Ваш баланс</span><div className={`text-6xl md:text-8xl font-bold mt-2 tracking-tighter drop-shadow-2xl ${userData.balance < 0 ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50'}`}>{userData.balance}<span className="text-2xl align-top ml-2 opacity-30 font-light">₴</span></div></div>
@@ -263,12 +210,27 @@
                                     </SpatialCard>
                                 </div>
                             )}
+
                             {activeTab === 'admin' && userData?.role === 'admin' && (
                                 <div className="space-y-4">
                                     <SpatialCard className="bg-[#FF2D55]/10 border-[#FF2D55]/20"><button onClick={deductAll} className="w-full flex items-center justify-between group"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-full bg-[#FF2D55] flex items-center justify-center text-white shadow-lg shadow-red-500/30 group-active:scale-90 transition-transform"><Icons.Activity size={24} /></div><div className="text-left"><div className="font-bold text-white text-lg">Зняти плату</div><div className="text-xs text-white/50">-30 грн з усіх</div></div></div></button></SpatialCard>
                                     <div className="pb-24 animate-fade-slide" style={{ animationDelay: '0.1s' }}>
                                         <h3 className="text-white/30 text-xs font-bold uppercase tracking-widest mb-4 pl-2">Учасники ({allMembers.length})</h3>
-                                        <div className="grid gap-3">{allMembers.map(m => (<div key={m.uid} className="bg-white/5 border border-white/5 rounded-[24px] p-4 flex flex-col gap-3 backdrop-blur-md"><div className="flex justify-between items-center"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">{m.name ? m.name.charAt(0) : '?'}</div><div><div className="font-bold text-sm max-w-[120px] truncate">{m.name || 'No Name'}</div><div className="text-[10px] text-white/40">{m.email || m.username || 'Telegram User'}</div></div></div><div className={`font-mono text-lg font-bold ${m.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{m.balance}</div></div><div className="flex gap-2"><button onClick={() => adminQuickAdd(m.uid, m.balance, 30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-[#30D158] hover:bg-[#30D158]/20 transition-colors">+30</button><button onClick={() => adminQuickAdd(m.uid, m.balance, -30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors">-30</button><button onClick={() => { setEditingMember(m); setManualBalance(m.balance); }} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center gap-1"><Icons.Edit size={14} /> Змінити</button></div></div>))}</div>
+                                        <div className="grid gap-3">{allMembers.map(m => (
+                                            <div key={m.uid} className="bg-white/5 border border-white/5 rounded-[24px] p-4 flex flex-col gap-3 backdrop-blur-md">
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">{m.name ? m.name.charAt(0) : '?'}</div><div><div className="font-bold text-sm max-w-[120px] truncate">{m.name || 'No Name'}</div><div className="text-[10px] text-white/40">{m.telegramId ? 'Bot Linked' : 'No Telegram'}</div></div></div>
+                                                    <div className={`font-mono text-lg font-bold ${m.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{m.balance}</div>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => adminQuickAdd(m.uid, m.balance, 30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-[#30D158] hover:bg-[#30D158]/20 transition-colors">+30</button>
+                                                    <button onClick={() => adminQuickAdd(m.uid, m.balance, -30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors">-30</button>
+                                                    <button onClick={() => { setEditingMember(m); setManualBalance(m.balance); }} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center gap-1"><Icons.Edit size={14} /> Змін.</button>
+                                                    {/* КНОПКА НАГАДУВАННЯ */}
+                                                    <button onClick={() => sendManualReminder(m)} className={`flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center transition-colors ${m.balance < 0 ? 'bg-[#FFCC00]/20 text-[#FFCC00] hover:bg-[#FFCC00]/30' : 'bg-white/5 text-white/30 hover:bg-white/10'}`}><Icons.Bell size={14} /></button>
+                                                </div>
+                                            </div>
+                                        ))}</div>
                                     </div>
                                 </div>
                             )}
