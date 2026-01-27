@@ -7,14 +7,41 @@ const path = require('path');
 
 const PORT = process.env.PORT || 3000;
 const TOKEN = process.env.TELEGRAM_BOT_TOKEN; 
-const APP_URL = process.env.APP_URL || 'https://google.com'; 
+// Отримуємо URL сайту (обов'язково додай цю змінну в Render!)
+const APP_URL = process.env.APP_URL; 
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
 
 const app = express();
 app.use(express.json());
 
-const bot = new TelegramBot(TOKEN, { polling: true });
+// 1. Ініціалізація бота БЕЗ polling (щоб не було конфліктів)
+const bot = new TelegramBot(TOKEN);
+
+// 2. Налаштування режиму роботи (Webhook vs Polling)
+const initBot = async () => {
+    if (APP_URL) {
+        // Якщо ми на Render (є URL) -> Ставимо Webhook
+        // Це вбиває всі інші копії бота і працює стабільно
+        const webhookUrl = `${APP_URL}/bot${TOKEN}`;
+        await bot.setWebHook(webhookUrl);
+        console.log(`✅ Webhook встановлено: ${webhookUrl}`);
+
+        // Слухаємо вхідні повідомлення від Телеграму
+        app.post(`/bot${TOKEN}`, (req, res) => {
+            bot.processUpdate(req.body);
+            res.sendStatus(200);
+        });
+    } else {
+        // Якщо ми локально (немає URL) -> Використовуємо Polling
+        console.log('⚠️ APP_URL не знайдено. Запуск у режимі Polling (локально)...');
+        await bot.deleteWebHook(); // Очищаємо вебхук, щоб працювало локально
+        bot.startPolling();
+    }
+};
+
+// Запускаємо налаштування
+initBot();
 
 if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
@@ -24,53 +51,49 @@ const db = admin.firestore();
 app.use(express.static(path.join(__dirname, 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
 
-// --- 1. НАГАДУВАННЯ ПРО БОРГ ---
+// --- API ---
 app.post('/api/notify', async (req, res) => {
     const { telegramId, name, balance } = req.body;
     if (!telegramId) return res.status(400).json({ error: 'No ID' });
-
+    // Якщо немає APP_URL, використовуємо заглушку, щоб не впало
+    const url = APP_URL || 'https://google.com';
     const message = `👋 <b>Привіт, ${name}!</b>\n\nНагадуємо про заборгованість.\nБаланс: <b>${balance} грн</b>.\n\nБудь ласка, поповни рахунок! 👇`;
     try {
-        await bot.sendMessage(telegramId, message, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: "💸 Поповнити", web_app: { url: APP_URL } }]] } });
+        await bot.sendMessage(telegramId, message, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: "💸 Поповнити", web_app: { url } }]] } });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 2. ПІДТВЕРДЖЕННЯ ОПЛАТИ ---
 app.post('/api/confirm-payment', async (req, res) => {
     const { telegramId, name } = req.body;
     if (!telegramId) return res.status(400).json({ error: 'No ID' });
-
-    // Універсальне повідомлення
-    const message = `✅ <b>Оплату зараховано, ${name}!</b>\n\nДякуємо за оперативність! 🤝\nТвоє ім'я додано до списку учасників розіграшу знижки в "Колесі Фортуни".\n\nУспіхів! 🍀`;
+    const url = APP_URL || 'https://google.com';
+    const message = `✅ <b>Оплату зараховано, ${name}!</b>\n\nДякуємо за оперативність! 🤝\nТвоє ім'я додано до розіграшу.\n\nУспіхів! 🍀`;
     try {
-        await bot.sendMessage(telegramId, message, { parse_mode: 'HTML' });
+        await bot.sendMessage(telegramId, message, { parse_mode: 'HTML', reply_markup: { inline_keyboard: [[{ text: "👛 Кабінет", web_app: { url } }]] } });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// --- 3. ПОВІДОМЛЕННЯ ПЕРЕМОЖЦЮ (НОВЕ) ---
 app.post('/api/notify-winner', async (req, res) => {
     const { telegramId, name, prize } = req.body;
     if (!telegramId) return res.status(400).json({ error: 'No ID' });
-
-    const message = `🎉 <b>ВІТАЄМО, ${name.toUpperCase()}!</b> 🎉\n\nТи перемагаєш у цьому місяці!\n\n🎁 <b>Твій виграш:</b> ${prize}\n\nДякуємо, що платиш вчасно! Знижка буде врахована адміном.`;
+    const message = `🎉 <b>ВІТАЄМО, ${name.toUpperCase()}!</b> 🎉\n\nТи перемагаєш у цьому місяці!\n\n🎁 <b>Твій виграш:</b> ${prize}\n\nДякуємо за вчасну оплату!`;
     try {
         await bot.sendMessage(telegramId, message, { parse_mode: 'HTML' });
         res.json({ success: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// Команда /start
 bot.on('message', (msg) => {
     if (msg.text === '/start') {
+        const url = APP_URL || 'https://google.com';
         bot.sendMessage(msg.chat.id, "Привіт! 👋\nНатисни кнопку, щоб відкрити Family Music.", {
-            reply_markup: { inline_keyboard: [[{ text: "🎵 Відкрити", web_app: { url: APP_URL } }]] }
+            reply_markup: { inline_keyboard: [[{ text: "🎵 Відкрити", web_app: { url } }]] }
         });
     }
 });
 
-// Cron (Нагадування)
 cron.schedule('0 10 * * *', async () => {
     const today = new Date();
     const day = today.getDate();
@@ -86,7 +109,6 @@ cron.schedule('0 10 * * *', async () => {
     }
 }, { timezone: "Europe/Kiev" });
 
-// Ping
-setInterval(() => { if(APP_URL.startsWith('http')) axios.get(APP_URL).catch(()=>{}); }, 600000);
+setInterval(() => { if(APP_URL) axios.get(APP_URL).catch(()=>{}); }, 600000);
 
 app.listen(PORT, () => console.log(`Running on ${PORT}`));
