@@ -4,23 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Music OS</title>
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     fontFamily: { sans: ['"SF Pro Display"', '-apple-system', 'sans-serif'] },
-                    animation: { 'fade-slide': 'fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' },
-                    keyframes: { fadeSlide: { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } } }
+                    animation: {
+                        'fade-slide': 'fadeSlide 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
+                    },
+                    keyframes: {
+                        fadeSlide: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
                 }
             }
         }
     </script>
+
     <style>
         body { background-color: #000; color: white; -webkit-tap-highlight-color: transparent; overflow-x: hidden; }
         .glass { background: rgba(255, 255, 255, 0.06); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2); }
@@ -53,6 +63,7 @@
         const MONO_JAR_LINK = "https://send.monobank.ua/jar/5kxFz7yYBp";
         const MONTHLY_PRICE = 30;
 
+        // ICONS
         const Icon = ({ path, className, size = 24 }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>);
         const Icons = {
             Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
@@ -74,7 +85,7 @@
             <div onClick={onClick} className={`relative overflow-hidden glass rounded-[32px] p-6 transition-all duration-300 active:scale-[0.98] animate-fade-slide ${className}`}>{children}</div>
         );
 
-        // --- WHEEL COMPONENT ---
+        // --- FIXED WHEEL LOGIC ---
         const Wheel = ({ participants, onWin, onClose }) => {
             const canvasRef = useRef(null);
             const [isSpinning, setIsSpinning] = useState(false);
@@ -102,13 +113,13 @@
                     ctx.fill();
                     ctx.stroke();
                     
-                    // Text
+                    // Draw Text
                     ctx.save();
                     ctx.translate(centerX, centerY);
                     ctx.rotate((i + 0.5) * sliceAngle);
                     ctx.textAlign = "right";
                     ctx.fillStyle = "white";
-                    ctx.font = "bold 14px sans-serif";
+                    ctx.font = "bold 16px sans-serif";
                     ctx.fillText(p.name.split(' ')[0], radius - 20, 5);
                     ctx.restore();
                 });
@@ -120,64 +131,68 @@
                 setWinner(null);
 
                 const canvas = canvasRef.current;
-                const duration = 4000;
-                const startRotation = 0;
-                // Random spins (5-10 full rotations + random angle)
-                const totalRotation = 360 * 5 + Math.random() * 360; 
-                const startTime = performance.now();
+                
+                // 1. Decide rotation randomly (5-10 full spins + offset)
+                const randomDegree = Math.floor(Math.random() * 360);
+                const totalRotation = 360 * 6 + randomDegree; 
+                
+                // 2. Animate visually
+                canvas.style.transition = 'transform 4s cubic-bezier(0.2, 0.8, 0.2, 1)';
+                canvas.style.transform = `rotate(${totalRotation}deg)`;
 
-                const animate = (time) => {
-                    const elapsed = time - startTime;
-                    const progress = Math.min(elapsed / duration, 1);
-                    // Ease out cubic
-                    const ease = 1 - Math.pow(1 - progress, 3);
+                // 3. Calculate Winner based on GEOMETRY, not random
+                setTimeout(() => {
+                    setIsSpinning(false);
                     
-                    const currentRotation = startRotation + totalRotation * ease;
-                    canvas.style.transform = `rotate(${currentRotation}deg)`;
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        setIsSpinning(false);
-                        // Calculate winner
-                        const finalAngle = currentRotation % 360;
-                        const sliceDeg = 360 / participants.length;
-                        // Needs logic to map angle to index. Simplified:
-                        // Canvas rotates clockwise. The pointer is usually at 3 o'clock (0 rad) or top.
-                        // Let's assume pointer is at 0 degrees (right).
-                        // Since canvas rotated `finalAngle`, the item at 0 is actually `360 - finalAngle`.
-                        const winningIndex = Math.floor(((360 - finalAngle + 90) % 360) / sliceDeg);
-                        // Note: The logic above is approximate for CSS rotation. 
-                        // For simplicity, we just pick a random winner in logic and show animation
-                        const randomWinIndex = Math.floor(Math.random() * participants.length);
-                        setWinner(participants[randomWinIndex]);
-                    }
-                };
-                requestAnimationFrame(animate);
+                    const sliceDeg = 360 / participants.length;
+                    // Normalize the rotation to 0-360
+                    const finalRotation = totalRotation % 360;
+                    
+                    // The pointer is at the TOP (270 degrees on a standard canvas unit circle).
+                    // We rotate clockwise.
+                    // The sector that lands on 270 degrees is the winner.
+                    // Math: (270 - Rotation) modulo 360 gives the angle on the original unrotated circle that is now at the top.
+                    let winningAngle = (270 - finalRotation) % 360;
+                    if (winningAngle < 0) winningAngle += 360;
+                    
+                    const winningIndex = Math.floor(winningAngle / sliceDeg);
+                    const winningPerson = participants[winningIndex];
+                    
+                    setWinner(winningPerson);
+                }, 4000);
             };
 
             return (
-                <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-fade-slide">
-                    <h2 className="text-2xl font-bold mb-6 text-white">Колесо Фортуни</h2>
-                    <div className="relative mb-8">
-                        <canvas ref={canvasRef} width="300" height="300" className="rounded-full shadow-2xl transition-transform" style={{ transition: isSpinning ? 'none' : 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' }}></canvas>
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full z-10 shadow-lg"></div>
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px] border-t-white z-20"></div>
+                <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl p-4 animate-fade-slide">
+                    <h2 className="text-2xl font-bold mb-6 text-white tracking-tight">Колесо Фортуни</h2>
+                    
+                    <div className="relative mb-10">
+                        {/* Pointer (Triangle at Top) */}
+                        <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-20">
+                            <div className="w-0 h-0 border-l-[15px] border-l-transparent border-r-[15px] border-r-transparent border-t-[30px] border-t-white drop-shadow-lg"></div>
+                        </div>
+                        
+                        <canvas ref={canvasRef} width="320" height="320" className="rounded-full shadow-2xl" style={{ transform: 'rotate(0deg)' }}></canvas>
+                        
+                        {/* Center Cap */}
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-6 h-6 bg-white rounded-full z-10 shadow-lg flex items-center justify-center">
+                            <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
+                        </div>
                     </div>
                     
                     {winner ? (
                         <div className="text-center animate-fade-slide">
-                            <p className="text-white/50 text-sm mb-1">Переможець:</p>
-                            <h3 className="text-3xl font-bold text-[#30D158] mb-6">{winner.name}</h3>
-                            <div className="flex gap-3">
-                                <button onClick={onClose} className="px-6 py-3 bg-white/10 rounded-xl font-bold">Закрити</button>
-                                <button onClick={() => onWin(winner)} className="px-6 py-3 bg-[#30D158] text-black rounded-xl font-bold shadow-lg shadow-green-500/20">Повідомити</button>
+                            <p className="text-white/50 text-sm mb-2 uppercase tracking-widest font-bold">Переможець</p>
+                            <h3 className="text-4xl font-black text-[#30D158] mb-8 drop-shadow-[0_0_15px_rgba(48,209,88,0.5)]">{winner.name}</h3>
+                            <div className="flex gap-4 w-full max-w-xs mx-auto">
+                                <button onClick={onClose} className="flex-1 py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-colors">Закрити</button>
+                                <button onClick={() => onWin(winner)} className="flex-1 py-4 bg-[#30D158] text-black rounded-2xl font-bold shadow-lg shadow-green-500/20 active:scale-95 transition-transform">Повідомити</button>
                             </div>
                         </div>
                     ) : (
-                        <div className="flex gap-3">
-                            <button onClick={onClose} className="px-6 py-3 bg-white/10 rounded-xl font-bold" disabled={isSpinning}>Скасувати</button>
-                            <button onClick={spin} className="px-6 py-3 bg-[#007AFF] text-white rounded-xl font-bold shadow-lg shadow-blue-500/20" disabled={isSpinning}>Крутити!</button>
+                        <div className="flex gap-4 w-full max-w-xs mx-auto">
+                            <button onClick={onClose} className="flex-1 py-4 bg-white/10 rounded-2xl font-bold hover:bg-white/20 transition-colors" disabled={isSpinning}>Скасувати</button>
+                            <button onClick={spin} className="flex-1 py-4 bg-gradient-to-r from-[#007AFF] to-[#5856D6] text-white rounded-2xl font-bold shadow-lg shadow-blue-500/30 active:scale-95 transition-transform" disabled={isSpinning}>Крутити!</button>
                         </div>
                     )}
                 </div>
@@ -214,7 +229,7 @@
             const [editingMember, setEditingMember] = useState(null);
             const [manualBalance, setManualBalance] = useState('');
             const [topUpAmount, setTopUpAmount] = useState('');
-            const [showWheel, setShowWheel] = useState(false); // Wheel state
+            const [showWheel, setShowWheel] = useState(false);
             const coverage = calculateCoverage(topUpAmount);
 
             useEffect(() => {
@@ -279,7 +294,7 @@
             if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-black"><div className="w-16 h-16 rounded-full border-4 border-t-[#007AFF] border-white/10 animate-spin mb-4"></div><p className="text-white/30 text-xs animate-pulse">З'єднання з Telegram...</p></div>;
             if (!tgUser) return <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-black"><div className="w-20 h-20 bg-[#007AFF]/20 rounded-full flex items-center justify-center mb-6 text-[#007AFF] animate-pulse"><Icons.Shield size={40} /></div><h1 className="text-2xl font-bold mb-2">Відкрийте в Telegram</h1><p className="text-white/50">Додаток працює в боті.</p></div>;
 
-            // Filter for wheel (only positive balance)
+            // Filter for wheel: only those who don't have debt (>= 0)
             const eligibleForWheel = allMembers.filter(m => m.balance >= 0);
 
             return (
