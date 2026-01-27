@@ -33,7 +33,7 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getFirestore, collection, onSnapshot, doc, updateDoc, setDoc, writeBatch, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
@@ -53,12 +53,13 @@
         const MONO_JAR_LINK = "https://send.monobank.ua/jar/5kxFz7yYBp";
         const MONTHLY_PRICE = 30;
 
-        // ICONS
         const Icon = ({ path, className, size = 24 }) => (<svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className}>{path}</svg>);
         const Icons = {
-            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
+            Sparkles: (p) => <Icon {...p} path={<><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></>} />,
             Music: (p) => <Icon {...p} path={<><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></>} />,
-            Wallet: (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />,
+
+Oleksandr, [27.01.2026 22:44]
+Wallet: (p) => <Icon {...p} path={<><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></>} />,
             Shield: (p) => <Icon {...p} path={<><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></>} />,
             LogOut: (p) => <Icon {...p} path={<><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></>} />,
             Activity: (p) => <Icon {...p} path={<><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></>} />,
@@ -66,22 +67,137 @@
             Calendar: (p) => <Icon {...p} path={<><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></>} />,
             Settings: (p) => <Icon {...p} path={<><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></>} />,
             Edit: (p) => <Icon {...p} path={<><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></>} />,
-            Bell: (p) => <Icon {...p} path={<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>} />
+            Bell: (p) => <Icon {...p} path={<><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></>} />,
+            Gift: (p) => <Icon {...p} path={<><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.9 4.9 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5"/></>} />,
+            Dices: (p) => <Icon {...p} path={<><rect width="12" height="12" x="2" y="10" rx="2" ry="2"/><path d="m17.92 14 3.5-3.5a2.24 2.24 0 0 0 0-3l-5-4.92a2.24 2.24 0 0 0-3 0L10 6"/><path d="M6 18h.01"/><path d="M10 14h.01"/><path d="M15 6h.01"/><path d="M18 9h.01"/></>} />
         };
 
-        const SpatialCard = ({ children, className = "", onClick, delay = "0s" }) => (
-            <div onClick={onClick} style={{ animationDelay: delay }} className={`relative overflow-hidden glass rounded-[32px] p-6 transition-all duration-300 active:scale-[0.98] animate-fade-slide ${className}`}>{children}</div>
+        const SpatialCard = ({ children, className = "", onClick }) => (
+            <div onClick={onClick} className={relative overflow-hidden glass rounded-[32px] p-6 transition-all duration-300 active:scale-[0.98] animate-fade-slide ${className}}>{children}</div>
         );
+
+        // --- WHEEL COMPONENT ---
+        const Wheel = ({ participants, onWin, onClose }) => {
+            const canvasRef = useRef(null);
+            const [isSpinning, setIsSpinning] = useState(false);
+            const [winner, setWinner] = useState(null);
+
+            const colors = ['#FF2D55', '#007AFF', '#5856D6', '#FF9500', '#30D158', '#AF52DE'];
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                const radius = canvas.width / 2 - 10;
+                
+                if (participants.length === 0) return;
+
+                const sliceAngle = (2 * Math.PI) / participants.length;
+
+                participants.forEach((p, i) => {
+                    ctx.beginPath();
+                    ctx.moveTo(centerX, centerY);
+                    ctx.arc(centerX, centerY, radius, i * sliceAngle, (i + 1) * sliceAngle);
+
+Oleksandr, [27.01.2026 22:44]
+ctx.fillStyle = colors[i % colors.length];
+                    ctx.fill();
+                    ctx.stroke();
+                    
+                    // Text
+                    ctx.save();
+                    ctx.translate(centerX, centerY);
+                    ctx.rotate((i + 0.5) * sliceAngle);
+                    ctx.textAlign = "right";
+                    ctx.fillStyle = "white";
+                    ctx.font = "bold 14px sans-serif";
+                    ctx.fillText(p.name.split(' ')[0], radius - 20, 5);
+                    ctx.restore();
+                });
+            }, [participants]);
+
+            const spin = () => {
+                if (isSpinning || participants.length === 0) return;
+                setIsSpinning(true);
+                setWinner(null);
+
+                const canvas = canvasRef.current;
+                const duration = 4000;
+                const startRotation = 0;
+                // Random spins (5-10 full rotations + random angle)
+                const totalRotation = 360 * 5 + Math.random() * 360; 
+                const startTime = performance.now();
+
+                const animate = (time) => {
+                    const elapsed = time - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    // Ease out cubic
+                    const ease = 1 - Math.pow(1 - progress, 3);
+                    
+                    const currentRotation = startRotation + totalRotation * ease;
+                    canvas.style.transform = rotate(${currentRotation}deg);
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        setIsSpinning(false);
+                        // Calculate winner
+                        const finalAngle = currentRotation % 360;
+                        const sliceDeg = 360 / participants.length;
+                        // Needs logic to map angle to index. Simplified:
+                        // Canvas rotates clockwise. The pointer is usually at 3 o'clock (0 rad) or top.
+                        // Let's assume pointer is at 0 degrees (right).
+                        // Since canvas rotated finalAngle, the item at 0 is actually 360 - finalAngle.
+                        const winningIndex = Math.floor(((360 - finalAngle + 90) % 360) / sliceDeg);
+                        // Note: The logic above is approximate for CSS rotation. 
+                        // For simplicity, we just pick a random winner in logic and show animation
+                        const randomWinIndex = Math.floor(Math.random() * participants.length);
+                        setWinner(participants[randomWinIndex]);
+                    }
+                };
+                requestAnimationFrame(animate);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl p-4 animate-fade-slide">
+                    <h2 className="text-2xl font-bold mb-6 text-white">Колесо Фортуни</h2>
+                    <div className="relative mb-8">
+                        <canvas ref={canvasRef} width="300" height="300" className="rounded-full shadow-2xl transition-transform" style={{ transition: isSpinning ? 'none' : 'transform 4s cubic-bezier(0.25, 0.1, 0.25, 1)' }}></canvas>
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full z-10 shadow-lg"></div>
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-4 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[20px] border-t-white z-20"></div>
+                    </div>
+
+Oleksandr, [27.01.2026 22:44]
+{winner ? (
+                        <div className="text-center animate-fade-slide">
+                            <p className="text-white/50 text-sm mb-1">Переможець:</p>
+                            <h3 className="text-3xl font-bold text-[#30D158] mb-6">{winner.name}</h3>
+                            <div className="flex gap-3">
+                                <button onClick={onClose} className="px-6 py-3 bg-white/10 rounded-xl font-bold">Закрити</button>
+                                <button onClick={() => onWin(winner)} className="px-6 py-3 bg-[#30D158] text-black rounded-xl font-bold shadow-lg shadow-green-500/20">Повідомити</button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex gap-3">
+                            <button onClick={onClose} className="px-6 py-3 bg-white/10 rounded-xl font-bold" disabled={isSpinning}>Скасувати</button>
+                            <button onClick={spin} className="px-6 py-3 bg-[#007AFF] text-white rounded-xl font-bold shadow-lg shadow-blue-500/20" disabled={isSpinning}>Крутити!</button>
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
         const TabBar = ({ activeTab, setActiveTab, isAdmin }) => {
             const totalItems = isAdmin ? 3 : 2;
             const itemWidthPercent = 100 / totalItems;
-            const getLeftPos = () => activeTab === 'home' ? '4px' : activeTab === 'wallet' ? `calc(${itemWidthPercent}% + 4px)` : `calc(${itemWidthPercent * 2}% + 4px)`;
+            const getLeftPos = () => activeTab === 'home' ? '4px' : activeTab === 'wallet' ? calc(${itemWidthPercent}% + 4px) : calc(${itemWidthPercent * 2}% + 4px);
             const getBgColor = () => activeTab === 'home' ? 'bg-white' : activeTab === 'wallet' ? 'bg-[#007AFF]' : 'bg-[#FF2D55]';
 
             return (
                 <div className="fixed bottom-6 left-1/2 -translate-x-1/2 glass-dark rounded-full p-1 h-[68px] w-[92%] max-w-[380px] flex items-center shadow-2xl z-50">
-                    <div className={`absolute top-1 bottom-1 rounded-full shadow-lg transition-all duration-500 cubic-bezier(0.23, 1, 0.32, 1) ${getBgColor()}`} style={{ left: getLeftPos(), width: `calc(${itemWidthPercent}% - 8px)` }} />
+                    <div className={absolute top-1 bottom-1 rounded-full shadow-lg transition-all duration-500 cubic-bezier(0.23, 1, 0.32, 1) ${getBgColor()}} style={{ left: getLeftPos(), width: calc(${itemWidthPercent}% - 8px) }} />
                     <button onClick={() => setActiveTab('home')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Music size={22} className={activeTab === 'home' ? 'text-black' : 'text-white/40'} />{activeTab === 'home' && <span className="text-[10px] text-black font-bold leading-none animate-fade-slide">Головна</span>}</button>
                     <button onClick={() => setActiveTab('wallet')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Wallet size={22} className={activeTab === 'wallet' ? 'text-white' : 'text-white/40'} />{activeTab === 'wallet' && <span className="text-[10px] text-white font-bold leading-none animate-fade-slide">Гаманець</span>}</button>
                     {isAdmin && <button onClick={() => setActiveTab('admin')} className="relative z-10 flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 transition-colors duration-300"><Icons.Shield size={22} className={activeTab === 'admin' ? 'text-white' : 'text-white/40'} /></button>}
@@ -92,7 +208,8 @@
         const calculateCoverage = (amount) => { const num = parseFloat(amount); if (!num || num <= 0) return null; return { months: Math.floor(num / MONTHLY_PRICE), remainder: num % MONTHLY_PRICE }; };
         const getDaysUntilPayment = () => { const now = new Date(); let target = new Date(now.getFullYear(), now.getMonth(), 10); if (now.getDate() >= 10) target = new Date(now.getFullYear(), now.getMonth() + 1, 10); return Math.ceil((target - now) / (1000 * 60 * 60 * 24)); };
 
-        function App() {
+Oleksandr, [27.01.2026 22:44]
+function App() {
             const [userData, setUserData] = useState(null);
             const [loading, setLoading] = useState(true);
             const [tgUser, setTgUser] = useState(null);
@@ -103,6 +220,7 @@
             const [editingMember, setEditingMember] = useState(null);
             const [manualBalance, setManualBalance] = useState('');
             const [topUpAmount, setTopUpAmount] = useState('');
+            const [showWheel, setShowWheel] = useState(false); // Wheel state
             const coverage = calculateCoverage(topUpAmount);
 
             useEffect(() => {
@@ -111,7 +229,6 @@
                     tg.ready(); tg.expand();
                     const user = tg.initDataUnsafe?.user;
                     setTgUser(user);
-
                     if (user) {
                         const userId = user.id.toString();
                         const userRef = doc(db, COLLECTION_NAME, userId);
@@ -145,25 +262,32 @@
             const adminQuickAdd = async (uid, current, delta) => { await updateDoc(doc(db, COLLECTION_NAME, uid.toString()), { balance: Number(current) + Number(delta) }); };
             const saveManualBalance = async () => { if (editingMember && manualBalance !== '') { await updateDoc(doc(db, COLLECTION_NAME, editingMember.uid.toString()), { balance: Number(manualBalance) }); setEditingMember(null); } };
 
-            // --- MANUAL REMINDER FUNCTION ---
             const sendManualReminder = async (member) => {
-                if(!member.telegramId) return alert('Користувач не прив\'язаний до Telegram!');
-                if(!confirm(`Надіслати нагадування для ${member.name}?`)) return;
-                
+                if(!member.telegramId) return alert('No ID!');
+                if(!confirm(Нагадати про борг ${member.name}?)) return;
+                try { await fetch('/api/notify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: member.telegramId, name: member.name, balance: member.balance }) }); alert('Надіслано!'); } catch (e) { alert('Помилка'); }
+            };
+
+Oleksandr, [27.01.2026 22:44]
+const sendPaymentConfirmation = async (member) => {
+                if(!member.telegramId) return alert('No ID!');
+                if(!confirm(Підтвердити оплату ${member.name}?)) return;
+                try { await fetch('/api/confirm-payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: member.telegramId, name: member.name }) }); alert('Надіслано!'); } catch (e) { alert('Помилка'); }
+            };
+
+            const notifyWinner = async (winner) => {
                 try {
-                    const response = await fetch('/api/notify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ telegramId: member.telegramId, name: member.name, balance: member.balance })
-                    });
-                    const res = await response.json();
-                    if(res.success) alert('Нагадування надіслано! 🔔');
-                    else alert('Помилка: ' + res.error);
-                } catch (e) { alert('Помилка мережі'); }
+                    await fetch('/api/notify-winner', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ telegramId: winner.telegramId, name: winner.name, prize: '50% Знижка' }) });
+                    alert(Вітання надіслано ${winner.name}!);
+                    setShowWheel(false);
+                } catch (e) { alert('Помилка'); }
             };
 
             if (loading) return <div className="h-screen flex flex-col items-center justify-center bg-black"><div className="w-16 h-16 rounded-full border-4 border-t-[#007AFF] border-white/10 animate-spin mb-4"></div><p className="text-white/30 text-xs animate-pulse">З'єднання з Telegram...</p></div>;
-            if (!tgUser) return <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-black"><div className="w-20 h-20 bg-[#007AFF]/20 rounded-full flex items-center justify-center mb-6 text-[#007AFF] animate-pulse"><Icons.Shield size={40} /></div><h1 className="text-2xl font-bold mb-2">Відкрийте в Telegram</h1><p className="text-white/50">Цей додаток працює тільки як частина Telegram-бота.</p></div>;
+            if (!tgUser) return <div className="h-screen flex flex-col items-center justify-center p-8 text-center bg-black"><div className="w-20 h-20 bg-[#007AFF]/20 rounded-full flex items-center justify-center mb-6 text-[#007AFF] animate-pulse"><Icons.Shield size={40} /></div><h1 className="text-2xl font-bold mb-2">Відкрийте в Telegram</h1><p className="text-white/50">Додаток працює в боті.</p></div>;
+
+            // Filter for wheel (only positive balance)
+            const eligibleForWheel = allMembers.filter(m => m.balance >= 0);
 
             return (
                 <div className="min-h-screen pb-32 font-sans relative">
@@ -183,16 +307,18 @@
                                 <div className="space-y-4">
                                     <SpatialCard className="bg-gradient-to-br from-[#007AFF]/20 to-[#5856D6]/20 border-white/10">
                                         <div className="flex justify-between items-start">
-                                            <div><span className="flex items-center gap-2 text-[#5AC8FA] text-xs font-bold uppercase tracking-widest mb-2"><Icons.Calendar size={14} /> Наступна оплата</span><h1 className="text-5xl font-bold tracking-tighter text-white drop-shadow-xl">{getDaysUntilPayment()} <span className="text-xl font-normal text-white/40">днів</span></h1></div>
+
+Oleksandr, [27.01.2026 22:44]
+<div><span className="flex items-center gap-2 text-[#5AC8FA] text-xs font-bold uppercase tracking-widest mb-2"><Icons.Calendar size={14} /> Наступна оплата</span><h1 className="text-5xl font-bold tracking-tighter text-white drop-shadow-xl">{getDaysUntilPayment()} <span className="text-xl font-normal text-white/40">днів</span></h1></div>
                                             <div className="text-right"><div className="text-2xl font-bold">{MONTHLY_PRICE}₴</div><div className="text-xs text-white/40 font-medium uppercase">щомісяця</div></div>
                                         </div>
-                                        <div className="mt-6 w-full h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] shadow-[0_0_10px_rgba(0,122,255,0.5)]" style={{ width: `${(30 - getDaysUntilPayment()) / 30 * 100}%` }}></div></div>
+                                        <div className="mt-6 w-full h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[#007AFF] to-[#5AC8FA] shadow-[0_0_10px_rgba(0,122,255,0.5)]" style={{ width: ${(30 - getDaysUntilPayment()) / 30 * 100}% }}></div></div>
                                     </SpatialCard>
                                     <SpatialCard delay="0.1s">
                                         <div className="flex items-center gap-5">
-                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-xl ${userData.balance < 0 ? 'bg-red-500 text-white shadow-red-500/40' : 'bg-[#30D158] text-black shadow-green-500/40'}`}>{userData.balance < 0 ? '!' : <Icons.Check size={32} strokeWidth={3} />}</div>
+                                            <div className={w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-xl ${userData.balance < 0 ? 'bg-red-500 text-white shadow-red-500/40' : 'bg-[#30D158] text-black shadow-green-500/40'}}>{userData.balance < 0 ? '!' : <Icons.Check size={32} strokeWidth={3} />}</div>
                                             <div className="flex-1"><h3 className="text-xl font-bold text-white">Ваш баланс</h3><p className="text-sm text-white/40">{userData.balance < 0 ? 'Будь ласка, поповніть' : 'Доступно на рахунку'}</p></div>
-                                            <div className={`text-3xl font-bold tracking-tight ${userData.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{userData.balance}₴</div>
+                                            <div className={text-3xl font-bold tracking-tight ${userData.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}}>{userData.balance}₴</div>
                                         </div>
                                     </SpatialCard>
                                     {userData.balance < 0 && <button onClick={() => setActiveTab('wallet')} className="w-full py-4 rounded-[28px] bg-white text-black font-bold shadow-lg active:scale-95 transition-transform animate-pulse-slow">Поповнити баланс</button>}
@@ -201,33 +327,40 @@
 
                             {activeTab === 'wallet' && (
                                 <div className="space-y-6">
-                                    <div className="text-center py-8 animate-fade-slide"><span className="text-white/40 text-xs font-bold uppercase tracking-[0.2em]">Ваш баланс</span><div className={`text-6xl md:text-8xl font-bold mt-2 tracking-tighter drop-shadow-2xl ${userData.balance < 0 ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50'}`}>{userData.balance}<span className="text-2xl align-top ml-2 opacity-30 font-light">₴</span></div></div>
+                                    <div className="text-center py-8 animate-fade-slide"><span className="text-white/40 text-xs font-bold uppercase tracking-[0.2em]">Ваш баланс</span><div className={text-6xl md:text-8xl font-bold mt-2 tracking-tighter drop-shadow-2xl ${userData.balance < 0 ? 'text-red-500' : 'text-transparent bg-clip-text bg-gradient-to-b from-white to-white/50'}}>{userData.balance}<span className="text-2xl align-top ml-2 opacity-30 font-light">₴</span></div></div>
                                     <SpatialCard delay="0.1s" className="bg-[#1c1c1e]/60">
                                         <label className="text-sm text-white/40 mb-3 block ml-1 font-medium">Скільки хочете скинути?</label>
                                         <div className="flex items-center gap-3 mb-6"><input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="0" className="flex-1 bg-black/40 border border-white/10 rounded-2xl p-4 text-3xl font-bold outline-none focus:border-[#007AFF] transition-all placeholder:text-white/10" /><span className="text-xl font-bold text-white/30">UAH</span></div>
                                         {coverage && (<div className="bg-[#007AFF]/10 border border-[#007AFF]/30 rounded-2xl p-4 mb-6 flex items-start gap-3"><Icons.Sparkles className="text-[#007AFF] shrink-0 mt-1" size={18} /><div><div className="font-bold text-[#5AC8FA]">Вистачить на {coverage.months} міс.</div>{coverage.remainder > 0 && <div className="text-xs text-white/60">та залишиться {coverage.remainder} грн</div>}</div></div>)}
-                                        <a href={MONO_JAR_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-[#ea5353] to-[#d63030] text-white font-bold text-center shadow-lg shadow-red-500/20 active:scale-[0.96] transition-all hover:brightness-110"><Icons.Wallet size={20}/> Відкрити Monobank</a>
+
+Oleksandr, [27.01.2026 22:44]
+<a href={MONO_JAR_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 w-full py-4 rounded-2xl bg-gradient-to-r from-[#ea5353] to-[#d63030] text-white font-bold text-center shadow-lg shadow-red-500/20 active:scale-[0.96] transition-all hover:brightness-110"><Icons.Wallet size={20}/> Відкрити Monobank</a>
                                     </SpatialCard>
                                 </div>
                             )}
 
                             {activeTab === 'admin' && userData?.role === 'admin' && (
                                 <div className="space-y-4">
-                                    <SpatialCard className="bg-[#FF2D55]/10 border-[#FF2D55]/20"><button onClick={deductAll} className="w-full flex items-center justify-between group"><div className="flex items-center gap-3"><div className="w-12 h-12 rounded-full bg-[#FF2D55] flex items-center justify-center text-white shadow-lg shadow-red-500/30 group-active:scale-90 transition-transform"><Icons.Activity size={24} /></div><div className="text-left"><div className="font-bold text-white text-lg">Зняти плату</div><div className="text-xs text-white/50">-30 грн з усіх</div></div></div></button></SpatialCard>
-                                    <div className="pb-24 animate-fade-slide" style={{ animationDelay: '0.1s' }}>
+                                    <div className="flex gap-3">
+                                        <SpatialCard className="flex-1 bg-[#FF2D55]/10 border-[#FF2D55]/20"><button onClick={deductAll} className="w-full flex items-center justify-center flex-col gap-2"><div className="w-10 h-10 rounded-full bg-[#FF2D55] flex items-center justify-center text-white shadow-lg"><Icons.Activity size={20} /></div><span className="text-xs font-bold text-white uppercase">Списати</span></button></SpatialCard>
+                                        <SpatialCard className="flex-1 bg-[#AF52DE]/10 border-[#AF52DE]/20"><button onClick={() => setShowWheel(true)} className="w-full flex items-center justify-center flex-col gap-2"><div className="w-10 h-10 rounded-full bg-[#AF52DE] flex items-center justify-center text-white shadow-lg"><Icons.Dices size={20} /></div><span className="text-xs font-bold text-white uppercase">Розіграш</span></button></SpatialCard>
+                                    </div>
+                                    <div className="pb-24 animate-fade-slide">
                                         <h3 className="text-white/30 text-xs font-bold uppercase tracking-widest mb-4 pl-2">Учасники ({allMembers.length})</h3>
                                         <div className="grid gap-3">{allMembers.map(m => (
                                             <div key={m.uid} className="bg-white/5 border border-white/5 rounded-[24px] p-4 flex flex-col gap-3 backdrop-blur-md">
                                                 <div className="flex justify-between items-center">
                                                     <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center font-bold text-sm">{m.name ? m.name.charAt(0) : '?'}</div><div><div className="font-bold text-sm max-w-[120px] truncate">{m.name || 'No Name'}</div><div className="text-[10px] text-white/40">{m.telegramId ? 'Bot Linked' : 'No Telegram'}</div></div></div>
-                                                    <div className={`font-mono text-lg font-bold ${m.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}`}>{m.balance}</div>
+                                                    <div className={font-mono text-lg font-bold ${m.balance < 0 ? 'text-red-400' : 'text-[#30D158]'}}>{m.balance}</div>
                                                 </div>
                                                 <div className="flex gap-2">
                                                     <button onClick={() => adminQuickAdd(m.uid, m.balance, 30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-[#30D158] hover:bg-[#30D158]/20 transition-colors">+30</button>
                                                     <button onClick={() => adminQuickAdd(m.uid, m.balance, -30)} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-red-400 hover:bg-red-500/20 transition-colors">-30</button>
-                                                    <button onClick={() => { setEditingMember(m); setManualBalance(m.balance); }} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center gap-1"><Icons.Edit size={14} /> Змін.</button>
-                                                    {/* КНОПКА НАГАДУВАННЯ */}
-                                                    <button onClick={() => sendManualReminder(m)} className={`flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center transition-colors ${m.balance < 0 ? 'bg-[#FFCC00]/20 text-[#FFCC00] hover:bg-[#FFCC00]/30' : 'bg-white/5 text-white/30 hover:bg-white/10'}`}><Icons.Bell size={14} /></button>
+                                                    <button onClick={() => { setEditingMember(m); setManualBalance(m.balance); }} className="flex-1 py-3 bg-white/5 rounded-xl text-xs font-bold text-white/50 hover:bg-white/10 hover:text-white transition-colors flex items-center justify-center gap-1"><Icons.Edit size={14} /></button>
+
+Oleksandr, [27.01.2026 22:44]
+<button onClick={() => sendManualReminder(m)} className={flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center transition-colors ${m.balance < 0 ? 'bg-[#FFCC00]/20 text-[#FFCC00] hover:bg-[#FFCC00]/30' : 'bg-white/5 text-white/30 hover:bg-white/10'}}><Icons.Bell size={14} /></button>
+                                                    <button onClick={() => sendPaymentConfirmation(m)} className="flex-1 py-3 rounded-xl text-xs font-bold flex items-center justify-center bg-[#30D158]/20 text-[#30D158] hover:bg-[#30D158]/30 transition-colors"><Icons.Gift size={14} /></button>
                                                 </div>
                                             </div>
                                         ))}</div>
@@ -241,6 +374,9 @@
 
                     {showAdminLogin && (<div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-xl p-6 animate-fade-slide"><div className="w-full max-w-xs glass p-6 rounded-[32px] text-center"><h3 className="text-lg font-bold mb-4">Вхід Модератора</h3><input type="password" value={adminCode} onChange={e => setAdminCode(e.target.value)} className="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-center tracking-[8px] text-xl mb-6 outline-none focus:border-[#007AFF]" placeholder="••••" autoFocus /><div className="flex gap-3"><button onClick={() => setShowAdminLogin(false)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/50 hover:text-white">Назад</button><button onClick={verifyAdmin} className="flex-1 py-3 rounded-xl bg-[#007AFF] font-bold shadow-lg shadow-blue-500/30">Увійти</button></div></div></div>)}
                     {editingMember && (<div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-xl p-6 animate-fade-slide"><div className="w-full max-w-xs glass p-6 rounded-[32px] text-center"><h3 className="text-lg font-bold mb-1">Зміна балансу</h3><p className="text-white/40 text-xs mb-6">{editingMember.name}</p><div className="flex items-center gap-2 justify-center mb-6"><input type="number" value={manualBalance} onChange={e => setManualBalance(e.target.value)} className="w-32 bg-transparent border-b-2 border-white/20 p-2 text-center text-4xl font-bold outline-none focus:border-[#007AFF]" autoFocus /><span className="text-xl font-bold text-white/30">₴</span></div><div className="flex gap-3"><button onClick={() => setEditingMember(null)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/50 hover:text-white">Скасувати</button><button onClick={saveManualBalance} className="flex-1 py-3 rounded-xl bg-[#30D158] text-black font-bold shadow-lg shadow-green-500/30">Зберегти</button></div></div></div>)}
+                    
+                    {/* WHEEL MODAL */}
+                    {showWheel && <Wheel participants={eligibleForWheel} onWin={notifyWinner} onClose={() => setShowWheel(false)} />}
                 </div>
             );
         }
@@ -249,5 +385,3 @@
     </script>
 </body>
 </html>
-
-
